@@ -1,0 +1,9 @@
+{
+    "theme": {
+        "bg": "#000000",
+        "surface": "#333333",
+        "surface2": "#292929",
+        "surface3": "#2c2c2e",
+        "accent": "#ffffff"
+    }
+}
