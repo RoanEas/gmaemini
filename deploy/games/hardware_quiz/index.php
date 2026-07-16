@@ -1123,7 +1123,7 @@ async function syncWinnersAndState() {
 }
 
 // Start polling
-setInterval(syncWinnersAndState, 2000);
+setInterval(syncWinnersAndState, 4000);
 syncWinnersAndState();
 </script>
 

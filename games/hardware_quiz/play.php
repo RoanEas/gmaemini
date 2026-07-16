@@ -4,6 +4,7 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: ../../index.php");
     exit();
 }
+session_write_close();
 
 $projectDir = '/gmaemini'; 
 $jsonPath = dirname(__DIR__, 2) . '/data/bingo_items.json';
@@ -751,8 +752,8 @@ updateThemeIcon();
 loadOrCreatePlayerCard();
 renderPlayerBoard();
 
-// Poll every 2 seconds
-setInterval(syncDrawnItems, 2000);
+// Poll every 4 seconds
+setInterval(syncDrawnItems, 4000);
 syncDrawnItems();
 </script>
 
