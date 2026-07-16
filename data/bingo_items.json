@@ -152,7 +152,12 @@
         }
     ],
     "round_id": "r_6a4b426a75dbf3.89814379",
-    "drawn_ids": [],
+    "drawn_ids": [
+        11,
+        4,
+        18,
+        20
+    ],
     "winners": [],
     "draw_sequence": [
         11,

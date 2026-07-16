@@ -2,7 +2,7 @@
 $host = "localhost";
 $username = "root"; // ปรับตามของวิทยาลัย (ถ้ามี)
 $password = "";     // ปรับตามของวิทยาลัย (ถ้ามี)
-$dbname = "club_game_db";
+$dbname = "game_db";
 
 $conn = new mysqli($host, $username, $password, $dbname);
 
