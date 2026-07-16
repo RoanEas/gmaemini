@@ -6,6 +6,11 @@ if (!isset($_SESSION['user_id'])) {
 }
 session_write_close();
 
+// Prevent browser caching
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 $projectDir = '/gmaemini'; 
 $jsonPath = dirname(__DIR__, 2) . '/data/bingo_items.json';
 
@@ -384,7 +389,8 @@ function toggleCell(cellIdx) {
     if (cell.isFree) return; // FREE cell always ticked
     
     // Anti-cheat check: only allow ticking if the item ID has been drawn on the server!
-    if (!cell.ticked && !serverDrawnIds.includes(cell.id)) {
+    const isDrawn = serverDrawnIds.some(id => String(id) === String(cell.id));
+    if (!cell.ticked && !isDrawn) {
         // Play error buzzer sound
         playTone(180, 'sawtooth', 0.2, 0.08);
         document.getElementById('bingo-status').textContent = `❌ อุปกรณ์ '${cell.name}' ยังไม่ถูกสุ่มออกรางวัล!`;
@@ -734,7 +740,8 @@ async function syncDrawnItems() {
         // Anti-cheat validation: untick any cell that is NOT drawn on the server (except FREE cell)
         let stateChanged = false;
         playerCard.forEach(cell => {
-            if (!cell.isFree && cell.ticked && !serverDrawnIds.includes(cell.id)) {
+            const isDrawn = serverDrawnIds.some(id => String(id) === String(cell.id));
+            if (!cell.isFree && cell.ticked && !isDrawn) {
                 cell.ticked = false;
                 stateChanged = true;
             }
