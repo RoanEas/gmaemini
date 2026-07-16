@@ -51,6 +51,7 @@ $isAdmin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ใครเอ่ย? — Senior Roulette</title>
     <link href="game_shuffle.css?v=<?=time();?>" rel="stylesheet">
+    <script src="../../assets/js/layout_manager.js?v=<?=time();?>"></script>
     <style>
         :root {
             --bg: <?= $bg ?>;

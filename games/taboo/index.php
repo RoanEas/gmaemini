@@ -193,6 +193,13 @@ $conn->query("CREATE TABLE IF NOT EXISTS `head_guess_rooms` (
                 <span>ออก</span>
             </button>
             
+            <!-- Zoom Sizer Group -->
+            <div class="font-zoom-ctrls" style="display: flex; align-items: center; gap: 4px; z-index: 9999; position: relative; pointer-events: auto;">
+                <button class="zoom-btn" id="zoom-btn-100" onclick="changeWordZoom(100)" style="padding: 6px 10px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; border: 1px solid var(--card-border); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer;">100</button>
+                <button class="zoom-btn active" id="zoom-btn-200" onclick="changeWordZoom(200)" style="padding: 6px 10px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; border: 1px solid var(--accent-cyan); background: rgba(0,212,255,0.15); color: #fff; cursor: pointer;">200</button>
+                <button class="zoom-btn" id="zoom-btn-300" onclick="changeWordZoom(300)" style="padding: 6px 10px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; border: 1px solid var(--card-border); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer;">300</button>
+            </div>
+
             <div class="hud-score">
                 <ion-icon name="trophy-outline" style="color: var(--accent-cyan);"></ion-icon>
                 คะแนน: <span id="current-score">0</span>
@@ -291,6 +298,13 @@ const SESSION_USERNAME = <?= json_encode($_SESSION['username'] ?? '') ?>;
 //  🎮 WORD DATABASE & CATEGORIES
 // ═══════════════════════════════════════════════════════════════
 const categories = [
+    {
+        id: "forbidden_words",
+        title: "เกมคำห้ามพูด (Taboo)",
+        desc: "ห้ามพูดคำเหล่านี้เด็ดขาด! มีระบบสุ่มคำให้โอบพาดไว้บนหน้าผาก",
+        icon: "ban-outline",
+        words: ["ส้มตำ", "หมูกระทะ", "ชาบู", "ห้องน้ำ", "โรงเรียน", "คอมพิวเตอร์", "โทรศัพท์", "การนอน", "ขอบคุณ", "ขอโทษ", "สวัสดี", "รถยนต์", "เครื่องบิน", "ฟุตบอล", "แมว", "ทะเล", "พัดลม", "ตู้เย็น", "แว่นตา", "กระดาษ"]
+    },
     {
         id: "hardware",
         title: "อุปกรณ์คอมพิวเตอร์",
@@ -469,6 +483,32 @@ let currentIndex = 0;
 let score = 0;
 let secondsRemaining = 60;
 let customRoundDuration = 60;
+
+// Taboo Zoom logic
+let tabooZoom = parseInt(localStorage.getItem('taboo_forehead_zoom') || '200');
+function changeWordZoom(size) {
+    tabooZoom = size;
+    localStorage.setItem('taboo_forehead_zoom', size);
+    
+    // Toggle active classes
+    document.querySelectorAll('.zoom-btn').forEach(btn => {
+        const isActive = btn.id === `zoom-btn-${size}`;
+        btn.classList.toggle('active', isActive);
+        if (isActive) {
+            btn.style.borderColor = 'var(--accent-cyan)';
+            btn.style.background = 'rgba(0,212,255,0.15)';
+        } else {
+            btn.style.borderColor = 'var(--card-border)';
+            btn.style.background = 'rgba(255,255,255,0.05)';
+        }
+    });
+    
+    const cardWordEl = document.getElementById('card-word');
+    if (cardWordEl) {
+        cardWordEl.style.fontSize = size + 'px';
+        cardWordEl.style.lineHeight = '1.2';
+    }
+}
 let gameInterval = null;
 let isSensorActive = false;
 let tiltCooldown = false;
@@ -904,6 +944,9 @@ function loadNextWord() {
     if (roomCode && isHost) {
         updateHostRoomWord();
     }
+    
+    // Apply zoom size
+    changeWordZoom(tabooZoom);
 }
 
 function triggerCorrect() {
@@ -1879,6 +1922,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.remove('theme-cyber');
     }
     renderCategories();
+    changeWordZoom(tabooZoom);
     
     // Add triple-tap handler to exit gameplay
     const screenPlay = document.getElementById('screen-play');

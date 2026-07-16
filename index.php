@@ -8,51 +8,56 @@ $avatarData = json_decode($jsonData, true);
 
 // ================= ระบบบันทึกข้อมูลตัวละครและชื่อสายลับครั้งแรก =================
 if (isset($_POST['start_agent'])) {
-    if (isset($_SESSION['user_id'])) {
-        $real_name = $_POST['real_name'];
-        $avatar_img = $_POST['selected_avatar']; 
-        $uid = $_SESSION['user_id'];
-        
-        $stmt = $conn->prepare("UPDATE users SET real_name = ?, avatar_img = ?, is_avatar_created = 1 WHERE id = ?");
-        $stmt->bind_param("ssi", $real_name, $avatar_img, $uid);
+    $real_name = $_POST['real_name'];
+    $avatar_img = $_POST['selected_avatar']; 
+    
+    // ตรวจสอบการ Login ของ Admin
+    if (strtolower(trim($real_name)) === 'admin' && !empty($_POST['admin_password'])) {
+        $admin_pass = $_POST['admin_password'];
+        $stmt = $conn->prepare("SELECT * FROM users WHERE username = 'admin' LIMIT 1");
         $stmt->execute();
-        
-        $_SESSION['real_name'] = $real_name;
-        $_SESSION['avatar_img'] = $avatar_img;
-        $_SESSION['avatar_status'] = 1; 
-        
-        header("Location: index.php");
-        exit();
-    }
-}
-
-// ================= ระบบล็อกอินเข้าสู่ระบบ =================
-if (isset($_POST['login'])) {
-    $username = $_POST['username']; $password = $_POST['password'];
-    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->bind_param("s", $username); $stmt->execute(); $result = $stmt->get_result();
-    if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc();
-        if (password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
-            $_SESSION['real_name'] = $user['real_name'];
-            $_SESSION['avatar_img'] = $user['avatar_img'];
-            $_SESSION['avatar_status'] = $user['is_avatar_created']; 
-            $_SESSION['score'] = $user['score'];
-            header("Location: index.php"); exit();
+        $res = $stmt->get_result();
+        if ($res->num_rows > 0) {
+            $admin_user = $res->fetch_assoc();
+            if (password_verify($admin_pass, $admin_user['password']) || $admin_pass === $admin_user['password'] || md5($admin_pass) === $admin_user['password']) {
+                $_SESSION['user_id'] = $admin_user['id'];
+                $_SESSION['username'] = $admin_user['username'];
+                $_SESSION['role'] = 'admin';
+                $_SESSION['real_name'] = 'System Admin';
+                $_SESSION['avatar_img'] = $avatar_img;
+                $_SESSION['avatar_status'] = 1; 
+                $_SESSION['score'] = $admin_user['score'];
+                header("Location: index.php");
+                exit();
+            } else {
+                echo "<script>alert('รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง');</script>";
+            }
+        } else {
+            echo "<script>alert('ไม่พบบัญชีแอดมินในระบบ');</script>";
         }
     }
-    echo "<script>alert('ข้อมูลเข้าสู่ระบบไม่ถูกต้อง');</script>";
-}
-
-// ================= ระบบสมัครสมาชิก =================
-if (isset($_POST['register'])) {
-    $username = $_POST['username']; $email = $_POST['email']; $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $username, $email, $password);
-    if($stmt->execute()) { echo "<script>alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบเพื่อเลือกตัวละครสายลับ');</script>"; }
+    
+    // Create an anonymous user
+    $temp_username = 'agent_' . time() . rand(1000, 9999);
+    $temp_email = $temp_username . '@gmaemini.local';
+    $password = password_hash((string)rand(100000,999999), PASSWORD_BCRYPT);
+    
+    $stmt = $conn->prepare("INSERT INTO users (username, email, password, real_name, avatar_img, is_avatar_created, role, score) VALUES (?, ?, ?, ?, ?, 1, 'member', 0)");
+    $stmt->bind_param("sssss", $temp_username, $temp_email, $password, $real_name, $avatar_img);
+    $stmt->execute();
+    
+    $user_id = $conn->insert_id;
+    
+    $_SESSION['user_id'] = $user_id;
+    $_SESSION['username'] = $temp_username;
+    $_SESSION['role'] = 'member';
+    $_SESSION['real_name'] = $real_name;
+    $_SESSION['avatar_img'] = $avatar_img;
+    $_SESSION['avatar_status'] = 1; 
+    $_SESSION['score'] = 0;
+    
+    header("Location: index.php");
+    exit();
 }
 
 if (isset($_GET['logout'])) { session_destroy(); header("Location: index.php"); exit(); }
@@ -64,6 +69,8 @@ if (isset($_GET['logout'])) { session_destroy(); header("Location: index.php"); 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ATBASH & CAESAR GAME 🚀</title>
     <link href="style.css?v=<?=time();?>" rel="stylesheet" type="text/css">
+    <!-- Layout Manager for PC/Mobile Separation -->
+    <script src="assets/js/layout_manager.js?v=<?=time();?>"></script>
     <!-- Ionicons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
@@ -78,7 +85,7 @@ if (isset($_GET['logout'])) { session_destroy(); header("Location: index.php"); 
     <div class="shape cross"></div>
 </div>
 
-<?php if (isset($_SESSION['user_id']) && $_SESSION['avatar_status'] == 0): ?>
+<?php if (!isset($_SESSION['user_id'])): ?>
 <div class="game-overlay">
     <div class="agent-card">
         <div class="main-preview-box">
@@ -96,11 +103,34 @@ if (isset($_GET['logout'])) { session_destroy(); header("Location: index.php"); 
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
-            <input type="text" name="real_name" class="agent-input" placeholder="ใส่ชื่อ นามสกุลสายลับ" required>
+            
+            <div style="position: relative; width: 100%;">
+                <input type="text" name="real_name" id="real_name_input" class="agent-input" placeholder="ใส่ชื่อ นามสกุลสายลับ" required oninput="checkAdminLogin(this.value)">
+                <ion-icon name="person-circle-outline" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: var(--text-muted); pointer-events: none;"></ion-icon>
+            </div>
+            
+            <!-- Hidden Admin Password Field -->
+            <div id="admin_password_container" style="display: none; position: relative; width: 100%; margin-top: 10px; animation: fadeIn 0.3s ease;">
+                <input type="password" name="admin_password" class="agent-input" placeholder="รหัสผ่านผู้ดูแลระบบ (Admin Password)" style="border-color: #facc15; box-shadow: 0 0 10px rgba(250, 204, 21, 0.2);">
+                <ion-icon name="key-outline" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: #facc15; pointer-events: none;"></ion-icon>
+            </div>
+            
             <button type="submit" name="start_agent" class="btn-submit">เริ่มต้นภารกิจ</button>
         </form>
     </div>
 </div>
+
+<script>
+function checkAdminLogin(val) {
+    const adminContainer = document.getElementById('admin_password_container');
+    if (val.trim().toLowerCase() === 'admin') {
+        adminContainer.style.display = 'block';
+    } else {
+        adminContainer.style.display = 'none';
+        adminContainer.querySelector('input').value = '';
+    }
+}
+</script>
 <?php endif; ?>
 
 
@@ -112,7 +142,7 @@ if (isset($_GET['logout'])) { session_destroy(); header("Location: index.php"); 
     </a>
 
     <?php if(isset($_SESSION['user_id'])): ?>
-        <a href="dashboard.php" class="user-profile-pill" style="text-decoration: none;">
+        <a href="<?php echo (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') ? 'dashboard.php' : '#'; ?>" class="user-profile-pill" style="text-decoration: none; <?php echo (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') ? '' : 'cursor: default;'; ?>">
             <img src="assets/avatar/<?php echo htmlspecialchars($_SESSION['avatar_img'] ?? 'dog.png'); ?>" 
                  onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=1'" class="user-avatar" alt="Avatar">
             <div class="user-info">
@@ -136,28 +166,28 @@ if (isset($_GET['logout'])) { session_destroy(); header("Location: index.php"); 
     <div id="tab-home" class="tab-content active">
         <div class="arcade-grid">
             
-            <a href="games/senior_roulette/index.php" class="game-card card-blue" <?php if(!isset($_SESSION['user_id'])) echo 'onclick="event.preventDefault(); switchTab(\'tab-login\', document.querySelector(\'[data-tab=\\\'tab-login\\\']\'));"'; ?>>
+            <a href="games/senior_roulette/index.php" class="game-card card-blue">
                 <ion-icon name="shuffle" class="game-icon"></ion-icon>
                 <div class="game-title">สุ่มภารกิจจับคู่</div>
                 <div class="game-desc">สับกองไพ่ทายปริศนาใบหน้ารุ่นพี่ ปวส.</div>
                 <div class="play-pill">PLAY</div>
             </a>
 
-            <a href="games/senior_roulette/game_music.php" class="game-card card-green" <?php if(!isset($_SESSION['user_id'])) echo 'onclick="event.preventDefault(); switchTab(\'tab-login\', document.querySelector(\'[data-tab=\\\'tab-login\\\']\'));"'; ?>>
+            <a href="games/senior_roulette/game_music.php" class="game-card card-green">
                 <ion-icon name="musical-notes" class="game-icon"></ion-icon>
                 <div class="game-title">สมรภูมิทายเพลง</div>
                 <div class="game-desc">ฟังเสียงท่อนฮุกออโต้จำกัดเวลาทายชื่อเพลง</div>
                 <div class="play-pill">PLAY</div>
             </a>
 
-            <a href="games/hardware_quiz/index.php" class="game-card card-orange" <?php if(!isset($_SESSION['user_id'])) echo 'onclick="event.preventDefault(); switchTab(\'tab-login\', document.querySelector(\'[data-tab=\\\'tab-login\\\']\'));"'; ?>>
+            <a href="games/hardware_quiz/index.php" class="game-card card-orange">
                 <ion-icon name="hardware-chip" class="game-icon"></ion-icon>
                 <div class="game-title">ทายภาพอุปกรณ์</div>
                 <div class="game-desc">วิเคราะห์ภาพฮาร์ดแวร์ ทดสอบความไว</div>
                 <div class="play-pill">PLAY</div>
             </a>
 
-            <a href="games/gacha_v2.php" class="game-card card-pink" <?php if(!isset($_SESSION['user_id'])) echo 'onclick="event.preventDefault(); switchTab(\'tab-login\', document.querySelector(\'[data-tab=\\\'tab-login\\\']\'));"'; ?>>
+            <a href="games/gacha_v2.php" class="game-card card-pink">
                 <ion-icon name="dice" class="game-icon"></ion-icon>
                 <div class="game-title">กาชาคัดออก</div>
                 <div class="game-desc">ตู้สไลด์สายพานสุ่มไฟกระพริบ 3 ใบสุดท้าย</div>
@@ -165,12 +195,37 @@ if (isset($_GET['logout'])) { session_destroy(); header("Location: index.php"); 
             </a>
 
             <!-- Heads Up Cyber -->
-            <a href="games/head_guess/index.php" class="game-card card-purple" <?php if(!isset($_SESSION['user_id'])) echo 'onclick="event.preventDefault(); switchTab(\'tab-login\', document.querySelector(\'[data-tab=\\\'tab-login\\\']\'));"'; ?>>
+            <a href="games/head_guess/index.php" class="game-card card-purple">
                 <ion-icon name="phone-portrait" class="game-icon"></ion-icon>
                 <div class="game-title">ทายคำบนหัว</div>
                 <div class="game-desc">ถือโทรศัพท์ทาบหน้าผาก ใบ้คำสุดมันส์กับเพื่อนๆ</div>
                 <div class="play-pill">PLAY</div>
             </a>
+
+            <!-- Taboo Party -->
+            <a href="games/taboo/index.php" class="game-card card-cyan">
+                <ion-icon name="ban" class="game-icon" style="color:var(--neon-pink); filter: drop-shadow(0 0 12px rgba(236,72,153,0.4));"></ion-icon>
+                <div class="game-title">เกมคำห้ามพูด</div>
+                <div class="game-desc">ห้ามพูดคำเหล่านี้เด็ดขาด! สร้างทีมแข่งความสามารถในการใบ้</div>
+                <div class="play-pill">PLAY</div>
+            </a>
+
+            <!-- Lightning Quiz (Admin Only) -->
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <a href="games/lightning_quiz/index.php" class="game-card card-green">
+                    <ion-icon name="flash" class="game-icon" style="color:var(--neon-yellow); filter: drop-shadow(0 0 12px rgba(250,204,21,0.4));"></ion-icon>
+                    <div class="game-title" style="color:var(--neon-green);">ปริศนาฟ้าแลบ</div>
+                    <div class="game-desc">ไต่หอคอยสายฟ้า 10 ระดับ ตอบคำถามความไวแสง (แอดมินควบคุม)</div>
+                    <div class="play-pill" style="background:var(--neon-green); color:#000;">ADMIN CONTROL</div>
+                </a>
+            <?php else: ?>
+                <div class="game-card card-orange" style="opacity: 0.4; cursor: not-allowed;" title="เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น">
+                    <ion-icon name="lock-closed" class="game-icon" style="color:var(--text-muted);"></ion-icon>
+                    <div class="game-title">ปริศนาฟ้าแลบ</div>
+                    <div class="game-desc">ไต่หอคอยสายฟ้า 10 ระดับ (เปิดให้เล่นเฉพาะแอดมินเป็นโฮสต์)</div>
+                    <div class="play-pill" style="background: rgba(255,255,255,0.05); color: var(--text-muted); cursor: not-allowed;">LOCKED</div>
+                </div>
+            <?php endif; ?>
 
         </div>
     </div>
@@ -204,47 +259,6 @@ if (isset($_GET['logout'])) { session_destroy(); header("Location: index.php"); 
     </div>
 
 
-    <!-- TAB 3: LOGIN -->
-    <div id="tab-login" class="tab-content">
-        <div class="auth-panel">
-            <h2>SIGN IN TO PLAY</h2>
-            <form action="index.php" method="POST">
-                <div class="input-group">
-                    <label>Username</label>
-                    <input type="text" name="username" required>
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" name="password" required>
-                </div>
-                <button type="submit" name="login" class="btn-submit">LOGIN</button>
-            </form>
-        </div>
-    </div>
-
-
-    <!-- TAB 4: REGISTER -->
-    <div id="tab-register" class="tab-content">
-        <div class="auth-panel">
-            <h2>CREATE AGENT PROFILE</h2>
-            <form action="index.php" method="POST">
-                <div class="input-group">
-                    <label>Username</label>
-                    <input type="text" name="username" required>
-                </div>
-                <div class="input-group">
-                    <label>Email</label>
-                    <input type="email" name="email" required>
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" name="password" required>
-                </div>
-                <button type="submit" name="register" class="btn-submit pink">REGISTER</button>
-            </form>
-        </div>
-    </div>
-
 </main>
 
 
@@ -263,16 +277,7 @@ if (isset($_GET['logout'])) { session_destroy(); header("Location: index.php"); 
             <span>RANK</span>
         </button>
 
-        <?php if(!isset($_SESSION['user_id'])): ?>
-            <button class="dock-btn" data-tab="tab-login" onclick="switchTab('tab-login', this)">
-                <ion-icon name="key"></ion-icon>
-                <span>LOGIN</span>
-            </button>
-            <button class="dock-btn" data-tab="tab-register" onclick="switchTab('tab-register', this)">
-                <ion-icon name="person-add"></ion-icon>
-                <span>JOIN</span>
-            </button>
-        <?php endif; ?>
+
         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
             <a href="admin.php" class="dock-btn" style="text-decoration: none; color: #facc15;">
                 <ion-icon name="settings"></ion-icon>
@@ -352,7 +357,10 @@ window.addEventListener('load', () => {
 window.addEventListener('resize', () => {
     const activeBtn = document.querySelector('.dock-btn.active');
     if (activeBtn) moveSlider(activeBtn);
-});
+// Auto Ping to keep online status
+setInterval(() => {
+    fetch('api_ping.php').catch(() => {});
+}, 15000);
 </script>
 </body>
 </html>

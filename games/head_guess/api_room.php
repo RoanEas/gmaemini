@@ -216,20 +216,42 @@ if ($action === 'exit') {
     $code = $_POST['room_code'] ?? '';
     $player_name = $_POST['player_name'] ?? '';
     
+    // Check if leaving player is host
+    $is_host = 0;
+    $stmt = $conn->prepare("SELECT is_host FROM head_guess_players WHERE room_code = ? AND player_name = ?");
+    $stmt->bind_param("ss", $code, $player_name);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($row = $res->fetch_assoc()) {
+        $is_host = $row['is_host'];
+    }
+    
+    // Delete the leaving player
     $stmt = $conn->prepare("DELETE FROM head_guess_players WHERE room_code = ? AND player_name = ?");
     $stmt->bind_param("ss", $code, $player_name);
     $stmt->execute();
     
-    // If no players left, close room
-    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM head_guess_players WHERE room_code = ?");
-    $stmt->bind_param("s", $code);
-    $stmt->execute();
-    $cnt = $stmt->get_result()->fetch_assoc()['count'];
-    
-    if ($cnt == 0) {
-        $stmt = $conn->prepare("DELETE FROM head_guess_rooms WHERE room_code = ?");
+    if ($is_host == 1) {
+        // Check if anyone else is still in the room
+        $stmt = $conn->prepare("SELECT player_name FROM head_guess_players WHERE room_code = ? ORDER BY id ASC LIMIT 1");
         $stmt->bind_param("s", $code);
         $stmt->execute();
+        $res = $stmt->get_result();
+        
+        if ($res->num_rows > 0) {
+            // Assign new host
+            $new_host = $res->fetch_assoc();
+            $new_host_name = $new_host['player_name'];
+            
+            $stmt = $conn->prepare("UPDATE head_guess_players SET is_host = 1 WHERE room_code = ? AND player_name = ?");
+            $stmt->bind_param("ss", $code, $new_host_name);
+            $stmt->execute();
+        } else {
+            // No one left, delete the room
+            $stmt = $conn->prepare("DELETE FROM head_guess_rooms WHERE room_code = ?");
+            $stmt->bind_param("s", $code);
+            $stmt->execute();
+        }
     }
     
     echo json_encode(["status" => "success"]);

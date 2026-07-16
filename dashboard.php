@@ -1,18 +1,45 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: index.php");
     exit();
 }
-$username = isset($_SESSION['username']) ? $_SESSION['username'] : "admin1";
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : "admin";
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>คลังข้อมูลกลาง - Cyber Dashboard</title>
+    <title>ระบบเช็คชื่อสายลับออนไลน์ (Live)</title>
     <link href="dashboard-style.css" rel="stylesheet" type="text/css">
+    <script src="assets/js/layout_manager.js?v=<?=time();?>"></script>
+    <style>
+        .minimal-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #0f051d;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+        }
+        .minimal-table th, .minimal-table td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .minimal-table th {
+            background: rgba(255,255,255,0.02);
+            color: #94a3b8;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .minimal-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+    </style>
 </head>
 <body>
 
@@ -20,78 +47,50 @@ $username = isset($_SESSION['username']) ? $_SESSION['username'] : "admin1";
 
     <header class="dash-header">
         <div class="welcome-zone">
-            <span class="badge">ระบบจัดการข้อมูลกลาง</span>
-            <h1>ยินดีต้อนรับ, <?php echo htmlspecialchars($username); ?></h1>
-            <p>ภาพรวมสถานะการทดสอบและสถาปัตยกรรมคลังอุปกรณ์ของคุณในปัจจุบัน</p>
+            <span class="badge">ระบบจัดการหลังบ้าน (Admin Only)</span>
+            <h1>หน้าต่างเช็คชื่อคนออนไลน์ (Live)</h1>
+            <p>รายชื่อจะถูกอัปเดตอัตโนมัติทุกๆ 5 วินาที แสดงเฉพาะผู้เล่นที่กำลังเปิดหน้าเว็บอยู่ในขณะนี้</p>
         </div>
     </header>
 
-    <main class="bento-grid">
-        
-        <div class="bento-item" style="background: linear-gradient(180deg, #0b0b12 0%, #1a0610 100%); border-color: rgba(255, 0, 85, 0.15);">
-            <div>
-                <h3>🎮 ปฏิบัติการจำลองระบบ</h3>
-                <h2 style="font-size: 1.4rem; font-weight: 600; margin-top: 12px; line-height: 1.4; letter-spacing: -0.3px;">
-                    แบบทดสอบ Hardware Identification Module
-                </h2>
-                <p style="color: var(--text-dim); font-weight: 300; margin-top: 8px; font-size: 0.88rem; line-height: 1.5;">
-                    เริ่มต้นการจับคู่ วิเคราะห์ และคัดกรองชุดอุปกรณ์คอมพิวเตอร์ผ่าน Bento สปีดจำลอง 10 วินาทีบีบหัวใจ
-                </p>
-            </div>
-            
-            <div class="btn-glow-container">
-                <a href="games/hardware_quiz/index.php" class="btn-launch">เข้าสู่โมดูลการทดสอบ ➔</a>
-            </div>
-        </div>
-
-        <div class="bento-item">
-            <h3>🏆 คะแนนสูงสุดของคุณ</h3>
-            <div>
-                <div class="huge-number" style="color: var(--neon-cyan); text-shadow: 0 0 25px rgba(0, 240, 255, 0.4);">100</div>
-                <div class="sub-info">อัปเดตล่าสุด: ประเมินผลผ่านเกณฑ์คัดกรองสมบูรณ์แบบ</div>
-            </div>
-        </div>
-
-        <div class="bento-item">
-            <h3>⚡ สถานะเซิร์ฟเวอร์</h3>
-            <div>
-                <div class="huge-number" style="font-size: 2.3rem; font-weight: 700; color: #ffffff; letter-spacing: 1px;">ONLINE</div>
-                <div class="sub-info" style="color: var(--neon-green);">
-                    <span style="width: 6px; height: 6px; background: var(--neon-green); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--neon-green);"></span>
-                    เชื่อมต่อฐานข้อมูล MySQL สำเร็จ
-                </div>
-            </div>
-        </div>
-
-        <div class="bento-item">
-            <h3>📦 อุปกรณ์ในระบบ</h3>
-            <div>
-                <div class="huge-number">10</div>
-                <div class="sub-info">ไอเทมหลักระบบโครงสร้างคอมพิวเตอร์</div>
-            </div>
-        </div>
-
-        <div class="bento-item">
-            <h3>⏱️ เวลาจำกัดต่อข้อ</h3>
-            <div>
-                <div class="huge-number" style="color: var(--neon-pink); text-shadow: 0 0 25px rgba(255, 0, 85, 0.4);">10s</div>
-                <div class="sub-info">ระบบนับถอยหลังตรวจวินาทีวิกฤตกลางหน้าจอ</div>
-            </div>
-        </div>
-
+    <main style="margin-top: 30px;">
+        <table class="minimal-table">
+            <thead>
+                <tr>
+                    <th width="80">โปรไฟล์</th>
+                    <th>ชื่อผู้เล่น</th>
+                    <th style="text-align: right;">สถานะล่าสุด</th>
+                </tr>
+            </thead>
+            <tbody id="online-users-tbody">
+                <tr><td colspan="3" style="text-align:center; color:#94a3b8; padding: 40px;">กำลังโหลดข้อมูล...</td></tr>
+            </tbody>
+        </table>
     </main>
 
     <nav class="floating-tabbar">
-        <a href="index.php" class="tab-item">หน้าแรกหลัก</a>
-        <a href="#" class="tab-item active">หน้าหลักแผงควบคุม</a>
-        <a href="games/hardware_quiz/index.php" class="tab-item">เข้าเล่นเกมคำถาม</a>
-        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-            <a href="admin.php" class="tab-item" style="color: #facc15;">ผู้ดูแลระบบ (Admin)</a>
-        <?php endif; ?>
+        <a href="index.php" class="tab-item">กลับหน้าแรก</a>
+        <a href="admin.php" class="tab-item" style="color: #facc15;">จัดการระบบ (ตั้งค่า)</a>
         <a href="logout.php" class="tab-item" style="color: var(--neon-pink);">ออกจากระบบ</a>
     </nav>
 
 </div>
+
+<script>
+function fetchOnlineUsers() {
+    fetch('api_admin_online.php')
+        .then(r => r.text())
+        .then(html => {
+            const tbody = document.getElementById('online-users-tbody');
+            if(tbody) tbody.innerHTML = html;
+        })
+        .catch(e => console.error(e));
+}
+
+// Initial fetch and poll every 5 seconds
+fetchOnlineUsers();
+setInterval(fetchOnlineUsers, 5000);
+</script>
 
 </body>
 </html>

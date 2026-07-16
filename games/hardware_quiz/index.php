@@ -110,6 +110,7 @@ $isAdmin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
     <!-- Ionicons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="../../assets/js/layout_manager.js?v=<?=time();?>"></script>
 </head>
 <body>
 <script>
